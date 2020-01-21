@@ -1,0 +1,97 @@
+#! /usr/bin/env ruby
+
+require 'pg'
+require 'io/console'
+
+class ExpenseData
+  def initialize
+    @db = PG.connect(dbname:"rb185");
+    @result = @db.exec('SELECT * FROM expenses')
+  end
+
+  def list(to_display = @result)
+    to_display.each do |tuple|
+      puts "#{tuple['id']}".rjust(4) + 
+           "|#{tuple['created_on']}|" + 
+           "#{tuple['amount']}".rjust(10) + 
+           "|#{tuple['memo']}".ljust(20)
+    end
+  end
+
+  def add_expense(args)
+    cost = args[1]
+    memo = args[2]
+    @db.exec_params("INSERT INTO expenses (created_on, amount, memo) VALUES (DEFAULT, $1, $2)", [cost, memo])
+  end
+
+  def search(term)
+    result = @db.exec_params("SELECT * FROM expenses WHERE memo ILIKE $1", ["%#{term}%"])
+    list(result)
+  end
+
+  def delete(id, clear = false)
+    sql = @db.exec_params("SELECT * FROM expenses WHERE id = $1", ["#{id}"])
+    if sql.ntuples == 0
+      abort "That id doesn't exist"
+    else
+      @db.exec_params("DELETE FROM expenses WHERE id = $1", ["#{id}"])
+      if clear
+        puts "All expenses have been deleted"
+      else
+        puts "The following expense has been deleted: "
+        list(sql)
+      end
+    end
+  end
+
+  def clear
+    puts "This will remove all expenses. Are you sure? (y/n) "
+    choice = STDIN.getch
+    if choice.downcase == 'y'
+      @result.column_values(0).each do |id|
+        delete(id, clear = true)
+      end
+    end
+  end
+end
+
+class CLI
+  def initialize
+    @data = ExpenseData.new
+  end
+
+  def run(args)
+    if args.length.zero?
+      help
+    elsif args[0] == 'list'
+      @data.list
+    elsif args[0] == 'add'
+      abort 'You must provide an amount and memo.' unless args[1]
+      @data.add_expense(args)
+    elsif args[0] == 'search'
+      @data.search(args[1])
+    elsif args[0] == 'delete'
+      abort "You didn't say what to delete!" unless args[1]
+      @data.delete(args[1])
+    elsif args[0] == 'clear'
+      @data.clear
+    end
+  end
+
+  def help
+    puts(<<~LIST)
+      An expense recording system
+
+      Commands:
+  
+      add AMOUNT MEMO [DATE] - record a new expense
+      clear - delete all expenses
+      list - list all expenses
+      delete NUMBER - remove expense with id NUMBER
+      search QUERY - list expenses with a matching memo field
+    LIST
+  end
+
+end
+
+CLI.new.run(ARGV)

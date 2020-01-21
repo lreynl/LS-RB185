@@ -1,0 +1,6 @@
+CREATE TABLE expenses (
+	id SERIAL PRIMARY KEY,
+	amount NUMERIC(6, 2),
+	memo VARCHAR(100),
+	created_on DATE NOT NULL DEFAULT CURRENT_DATE
+);
