@@ -6,16 +6,54 @@ require 'io/console'
 class ExpenseData
   def initialize
     @db = PG.connect(dbname:"rb185");
+    setup_schema
     @result = @db.exec('SELECT * FROM expenses')
+    @memo_length = 20
+    @amount_length = 10
+    @id_length = 4
+    @created_on_length = 10
+  end
+
+  def setup_schema
+    sql ="SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'expenses';"
+    result =  @db.exec_params(sql)
+    if result.ntuples.zero?
+      sql = "CREATE TABLE expenses (id SERIAL PRIMARY KEY, amount NUMERIC(6, 2), memo VARCHAR(100), created_on DATE NOT NULL DEFAULT CURRENT_DATE);"
+      @db.exec_params(sql)
+    end
+  end
+
+  def display_count(expenses)
+    if expenses.zero?
+      puts "There are no expenses."
+    else
+      puts "There " + (expenses == 1 ? "is" : "are") + 
+           " #{expenses} " + 
+           (expenses == 1 ? "expense." : "expenses.")
+    end
+  end
+
+  def display_total(expenses, total)
+    unless expenses.zero?
+      puts '-' * (@memo_length + @amount_length + @id_length + @created_on_length)
+      spaces = (' ' * (@id_length + @created_on_length + @amount_length - 'total'.length - (total.to_s.length) + 2))
+      puts "Total" + spaces + total.to_s
+    end
   end
 
   def list(to_display = @result)
+    expenses = to_display.ntuples
+    display_count(expenses)
+    total = 0
     to_display.each do |tuple|
       puts "#{tuple['id']}".rjust(4) + 
            "|#{tuple['created_on']}|" + 
            "#{tuple['amount']}".rjust(10) + 
            "|#{tuple['memo']}".ljust(20)
-    end
+      total += tuple['amount'].to_f
+    end       
+    total = total.round(2)
+    display_total(expenses, total)
   end
 
   def add_expense(args)
@@ -44,13 +82,15 @@ class ExpenseData
     end
   end
 
+  def delete_all_expenses
+    @db.exec_params("DELETE FROM expenses")
+  end
+
   def clear
     puts "This will remove all expenses. Are you sure? (y/n) "
     choice = STDIN.getch
     if choice.downcase == 'y'
-      @result.column_values(0).each do |id|
-        delete(id, clear = true)
-      end
+      delete_all_expenses
     end
   end
 end
@@ -63,17 +103,19 @@ class CLI
   def run(args)
     if args.length.zero?
       help
-    elsif args[0] == 'list'
+    end
+    case args[0]
+    when 'list'
       @data.list
-    elsif args[0] == 'add'
+    when 'add'
       abort 'You must provide an amount and memo.' unless args[1]
       @data.add_expense(args)
-    elsif args[0] == 'search'
+    when 'search'
       @data.search(args[1])
-    elsif args[0] == 'delete'
+    when 'delete'
       abort "You didn't say what to delete!" unless args[1]
       @data.delete(args[1])
-    elsif args[0] == 'clear'
+    when 'clear'
       @data.clear
     end
   end
