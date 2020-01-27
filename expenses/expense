@@ -15,12 +15,24 @@ class ExpenseData
   end
 
   def setup_schema
-    sql ="SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'expenses';"
-    result =  @db.exec_params(sql)
-    if result.ntuples.zero?
-      sql = "CREATE TABLE expenses (id SERIAL PRIMARY KEY, amount NUMERIC(6, 2), memo VARCHAR(100), created_on DATE NOT NULL DEFAULT CURRENT_DATE);"
+    sql = <<~SQL
+               SELECT COUNT(*) FROM information_schema.tables 
+               WHERE table_schema = 'public' 
+               AND table_name = 'expenses';
+             SQL
+    result = @db.exec_params(sql)
+    if result[0]["count"] == '0'
+      sql = <<~SQL
+                 CREATE TABLE expenses (
+                   id SERIAL PRIMARY KEY,
+                   amount NUMERIC(6, 2),
+                   memo VARCHAR(100),
+                   created_on DATE NOT NULL DEFAULT CURRENT_DATE
+                 );
+               SQL
       @db.exec_params(sql)
     end
+    true
   end
 
   def display_count(expenses)
