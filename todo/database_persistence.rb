@@ -48,21 +48,10 @@ class DatabasePersistence
   def lists
     sql = "SELECT * FROM lists"
     result = @db.exec(sql)
-
-    sql = "SELECT todos.name FROM lists JOIN todos ON lists.id = todos.list"
-    todos = @db.exec(sql)
     
     result.map do |tuple|
       list_id = tuple["id"]
-      todo_sql = "SELECT * FROM lists WHERE id = $1"
-      todos_result = @db.exec_params(todo_sql, [list_id])
-      
-      todos = todos_result.map do |todo_tuple|
-        { id: todo_tuple["id"], 
-          name: todo_tuple["name"], 
-          completed: todo_tuple["completed"] }
-      end
-      
+      todos = find_todos_for_list(list_id)
       { id: list_id, name: tuple["name"], todos: todos }
     end
     
@@ -74,7 +63,9 @@ class DatabasePersistence
     puts "#{sql}: #{id}"
     result = @db.exec_params(sql, [id + 1]) #PRIMARY KEY starts at 1
     tuple = result.first
-    { id: tuple["id"], name: tuple["name"], todos: [] }
+    list_id = tuple["id"].to_i
+    todos = find_todos_for_list(list_id)
+    { id: list_id, name: tuple["name"], todos: todos }
   end
 
   def delete_list(id)
@@ -92,5 +83,17 @@ class DatabasePersistence
 
   def list_matches(name)
     #@session[:lists].any? { |list| list[:name] == name }
+  end
+
+  private
+
+  def find_todos_for_list(list_id)
+    todo_sql = "SELECT * FROM todos WHERE list = $1"
+    todos_result = @db.exec_params(todo_sql, [list_id])
+    todos_result.map do |todo_tuple|
+      { id: todo_tuple["id"].to_i, 
+        name: todo_tuple["name"], 
+        completed: todo_tuple["completed"] == 't' }
+    end
   end
 end
