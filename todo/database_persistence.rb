@@ -11,10 +11,12 @@ class DatabasePersistence
 
   def set_error(msg)
     #@session[:error] = msg
+    
   end
 
   def set_success(msg)
-    #@session[:success] = msg
+    #session[:success] = msg
+    
   end
 
   def get_success
@@ -61,7 +63,7 @@ class DatabasePersistence
     #@session[:lists][id]
     sql = "SELECT * FROM lists WHERE id = $1"
     puts "#{sql}: #{id}"
-    result = @db.exec_params(sql, [id + 1]) #PRIMARY KEY starts at 1
+    result = @db.exec_params(sql, [id])
     tuple = result.first
     list_id = tuple["id"].to_i
     todos = find_todos_for_list(list_id)
@@ -70,15 +72,20 @@ class DatabasePersistence
 
   def delete_list(id)
     #@session[:lists].delete_at(id)
+    sql = "DELETE FROM lists WHERE id = $1"
+    @db.exec_params(sql, [id])
+    sql = "DELETE FROM todos WHERE list = $1"
+    @db.exec_params(sql, [id])
   end
 
   def add_todo(list_id, todo)
     #@session[:lists][list_id][:todos] << todo
   end
 
-  def add_list(list)
+  def add_list(list_name)
     #@session[:lists] << list
-    
+    sql = "INSERT INTO lists (name) VALUES ($1)"
+    @db.exec_params(sql, [list_name])
   end
 
   def list_matches(name)

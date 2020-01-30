@@ -130,8 +130,8 @@ post "/lists" do
     erb :new_list, layout: :layout
   else
     #session[:lists] << { name: list_name, todos: [] }
-    list = { name: list_name, todos: [] }
-    @storage.add_list(list)
+    #list = { name: list_name, todos: [] }
+    @storage.add_list(list_name)
     @storage.set_success("The list has been created.")
     redirect "/lists"
   end
