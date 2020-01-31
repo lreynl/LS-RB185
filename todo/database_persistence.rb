@@ -10,41 +10,54 @@ class DatabasePersistence
   end
 
   def set_error(msg)
-    #@session[:error] = msg
+    session[:error] = msg
     
   end
 
   def set_success(msg)
-    #session[:success] = msg
+    session[:success] = msg
     
   end
 
   def get_success
-    #@session[:success]
+    session[:success]
   end
 
   def get_error
-    #@session[:error]
+    session[:error]
   end
 
   def delete_success
-    #@session.delete(:success)
+    session.delete(:success)
   end  
 
   def delete_error
-    #@session.delete(:error)
+    session.delete(:error)
   end
 
   def todos(list_id)
     #@session[:lists][list_id][:todos]
+    sql = "SELECT * FROM todos WHERE list = $1"
+    result = @db.exec_params(sql, [list_id])
+    result.map do |tuple|
+      todo_id = tuple["id"]
+      { id: todo_id, name: tuple["name"], completed: tuple["completed"] }
+    end
   end
 
-  def todo_completed(list_id, todo_id, completed)
-    #@session[:lists][list_id][:todos][todo_id][:completed] = completed
+  def todo_completed(todo_id, is_completed)
+    sql = "UPDATE todos SET completed = $1 WHERE id = $2"
+    @db.exec_params(sql, [is_completed, todo_id])
   end
 
-  def delete_todo(list_id, todo_id)
-    #@session[:lists][list_id][:todos].delete_at(todo_id)[:name]
+  def complete_all(list_id)
+    sql = "UPDATE todos SET completed = $1 WHERE list = $2"
+    @db.exec_params(sql, [true, list_id])
+  end
+
+  def delete_todo(todo_id)
+    sql = "DELETE FROM todos WHERE id = $1"
+    @db.exec_params(sql, [todo_id])
   end
 
   def lists
@@ -60,7 +73,6 @@ class DatabasePersistence
   end
 
   def list(id)
-    #@session[:lists][id]
     sql = "SELECT * FROM lists WHERE id = $1"
     puts "#{sql}: #{id}"
     result = @db.exec_params(sql, [id])
@@ -70,26 +82,33 @@ class DatabasePersistence
     { id: list_id, name: tuple["name"], todos: todos }
   end
 
+  def update(list_id, list_name)
+    sql = "UPDATE lists SET name = $1 WHERE id = $2"
+    @db.exec_params(sql, [list_name, list_id])
+    
+  end
+
   def delete_list(id)
-    #@session[:lists].delete_at(id)
     sql = "DELETE FROM lists WHERE id = $1"
     @db.exec_params(sql, [id])
     sql = "DELETE FROM todos WHERE list = $1"
     @db.exec_params(sql, [id])
   end
 
-  def add_todo(list_id, todo)
-    #@session[:lists][list_id][:todos] << todo
+  def add_todo(list_id, todo_name)
+    sql = "INSERT INTO todos (name, completed, list) VALUES ($1, $2, $3)"
+    @db.exec_params(sql, [todo_name, false, list_id])
   end
 
   def add_list(list_name)
-    #@session[:lists] << list
     sql = "INSERT INTO lists (name) VALUES ($1)"
     @db.exec_params(sql, [list_name])
   end
 
   def list_matches(name)
     #@session[:lists].any? { |list| list[:name] == name }
+    sql = "SELECT name FROM lists WHERE lists.name = $1"
+    @db.exec_params(sql, [name])
   end
 
   private
