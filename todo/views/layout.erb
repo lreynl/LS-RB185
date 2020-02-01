@@ -15,15 +15,15 @@
       </div>
     </header>
     
-    <% if @storage.get_error %>
+    <% if session[:error] %>
       <div class="flash error">
-        <p><%= @storage.delete_error %></p>
+        <p><%= session.delete(:error) %></p>
       </div>
     <% end %>
     
-    <% if @storage.get_success %>
+    <% if session[:success] %>
       <div class="flash success">
-        <p><%= @storage.delete_success %></p>
+        <p><%= session.delete(:success) %></p>
       </div>
     <% end %>
     <main>

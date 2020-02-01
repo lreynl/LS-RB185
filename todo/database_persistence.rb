@@ -9,32 +9,6 @@ class DatabasePersistence
     #@session[:lists].find { |list| list[:id] == id }
   end
 
-  def set_error(msg)
-    session[:error] = msg
-    
-  end
-
-  def set_success(msg)
-    session[:success] = msg
-    
-  end
-
-  def get_success
-    session[:success]
-  end
-
-  def get_error
-    session[:error]
-  end
-
-  def delete_success
-    session.delete(:success)
-  end  
-
-  def delete_error
-    session.delete(:error)
-  end
-
   def todos(list_id)
     #@session[:lists][list_id][:todos]
     sql = "SELECT * FROM todos WHERE list = $1"
@@ -108,7 +82,8 @@ class DatabasePersistence
   def list_matches(name)
     #@session[:lists].any? { |list| list[:name] == name }
     sql = "SELECT name FROM lists WHERE lists.name = $1"
-    @db.exec_params(sql, [name])
+    result = @db.exec_params(sql, [name])
+    result.first
   end
 
   private
